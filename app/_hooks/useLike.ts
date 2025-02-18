@@ -1,4 +1,5 @@
 import { likeArticle, deleteLikeArticle } from '@/_lib/api/like-api';
+import { useAuthStore } from '@/_store/auth-store';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 type LikeArticleType = {
@@ -13,11 +14,18 @@ type UseLikeParams = {
 
 // 좋아요 & 좋아요 취소
 export const useLike = () => {
+  const { accessToken } = useAuthStore();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ articleId, liked }: UseLikeParams) =>
-      liked ? deleteLikeArticle(articleId) : likeArticle(articleId),
+    mutationFn: ({ articleId, liked }: UseLikeParams) => {
+      if (!accessToken) {
+        throw new Error('로그인 필요');
+      }
+      return liked
+        ? deleteLikeArticle(articleId, accessToken)
+        : likeArticle(articleId, accessToken);
+    },
 
     onMutate: async ({ articleId, liked }: UseLikeParams) => {
       await queryClient.cancelQueries({ queryKey: ['articles', articleId] });
